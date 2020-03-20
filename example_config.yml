@@ -1,0 +1,46 @@
+---
+
+repositories:
+  local:
+    RESTIC_PASSWORD: "MY_PASSWORD" 
+    RESTIC_REPOSITORY: "/home/user/backup"
+  server:
+    RESTIC_PASSWORD: "MY_PASSWORD" 
+    RESTIC_REPOSITORY: "sftp:user@192.0.0.8:backup"
+  s3bucket:
+    AWS_ACCESS_KEY_ID: "MY_ACCESS_KEY"
+    AWS_SECRET_ACCESS_KEY: "MY_SECRET_ACCESS_KEY"
+
+globals:
+  clean_policy:
+    "--keep-yearly": 5
+    "--keep-monthly": 12
+    "--keep-weekly": 4
+    "--keep-daily": 7
+    "--keep-hourly": 24
+    "--keep-last":  3
+
+units:
+  secret:
+    repositories:
+      - local
+      - server
+      - s3bucket
+    include:
+      - ".gnupg/"
+      - ".ssh/"
+
+  data:
+    repositories:
+      - s3bucket
+    include:
+      - "Pictures/"
+      - "Documents/"
+      - "Music/"
+      - "Videos/"
+      - ".local/"
+    exclude:
+      - ".local/share/containers/*"
+      - ".local/share/Trash/*"
+
+...

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# TODO rename file to `backup` or `pyrestic`
 import os
 import sys
 import enum
@@ -85,6 +84,7 @@ def cd(path):
         os.chdir(cwd)
 
 
+# TODO this is a bit overkill and should be replaced by good old dictionaries
 class NameSpaceDict(dict):
     """A dictionary class whose members can be accessed as attributes."""
     @staticmethod

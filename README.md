@@ -2,12 +2,13 @@
 
 A convenience wrapper for _restic_.
 
-**Installation**
+## Install
 In order to install `backup`, make the installation script executable and run it:
 ```bash
 chmod +x install.sh && ./install.sh
 ```
 
+## Examples
 **Backup all units**
 ```bash
 backup run

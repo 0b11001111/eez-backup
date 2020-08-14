@@ -4,10 +4,10 @@ A convenience wrapper for _restic_.
 
 **Backup all units**
 ```bash
-./backup.py backup
+backup run
 ```
 
-**Check repository named "server"**
+**Check repositories named "foo" and "bar"**
 ```bash
-./backup.py -r server restic check
+backup -r foo -r bar map check
 ```

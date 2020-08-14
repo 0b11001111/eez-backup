@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+# TODO rename file to `backup` or `pyrestic`
 import os
 import sys
 import enum
@@ -224,30 +224,39 @@ def backup(config, args):
 
 
 if __name__ == '__main__':
+    # cli
     parser = argparse.ArgumentParser(description='convenience wrapper for restic')
-
-    parser.add_argument('-c', '--config', type=str, default='config.yml', metavar='', help='configuration file to use')
-    parser.add_argument('-r', '--repository', action='append', type=str, metavar='', help='repositories to use')
+    parser.add_argument(
+        '-c', '--config', type=str, default='~/.backup.yml', metavar='',
+        help='configuration file to use, default is ~/.backup.yml'
+    )
+    parser.add_argument(
+        '-r', '--repository', action='append', type=str, metavar='',
+        help='repositories to use, default is to use all repositories'
+    )
 
     subparsers = parser.add_subparsers(required=True, help='commands')
 
-    exe_parser = subparsers.add_parser('restic')
-    exe_parser.add_argument('args', nargs=argparse.REMAINDER)
-    exe_parser.set_defaults(func=restic)
+    run_parser = subparsers.add_parser('run', help='run the backup')
+    run_parser.set_defaults(func=backup)
 
-    bup_parser = subparsers.add_parser('backup')
-    bup_parser.set_defaults(func=backup)
+    map_parser = subparsers.add_parser('map', help='execute a restic command for all repositories')
+    map_parser.add_argument('args', nargs=argparse.REMAINDER)
+    map_parser.set_defaults(func=restic)
 
     args = parser.parse_args()
     
-    with open(args.config, mode='rt') as f:
+    # load config
+    with Path(args.config).expanduser().open(mode='rt') as f:
         config = NameSpaceDict(load(f, Loader=Loader))
 
+    # manipulate config with respect to cli arguments
     if args.repository:
         try:
             config.repositories = {r: config.repositories[r] for r in args.repository}
 
         except KeyError as err:
-            raise ValueError(f'unknown repository {err}, chose one of: {sorted(config.repositories)}')
+            raise ValueError(f'unknown repository {err}, choose one of: {list(config.repositories)}')
 
+    # execute
     sys.exit(args.func(config, args))

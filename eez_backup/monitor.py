@@ -3,10 +3,14 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel
-from tqdm.asyncio import tqdm as Tqdm
-
-from eez_backup.formatting import Format, MultiFormat
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    MofNCompleteColumn,
+    TimeElapsedColumn,
+)
 
 if TYPE_CHECKING:
     from eez_backup.command import Status
@@ -65,85 +69,59 @@ class LoggerMonitor(Monitor):
         self._stack.clear()
 
 
-class TqdmMonitorFormattingConfig(BaseModel):
-    description: MultiFormat = Format.FB + Format.B
-    job: MultiFormat = Format.Y
-    bar: MultiFormat = Format.Y
-    suffix: MultiFormat = MultiFormat()
-    status_ok: MultiFormat = Format.G
-    status_err: MultiFormat = Format.FB + Format.R
-
-
-class TqdmMonitor(Monitor):
+class ProgressMonitor(Monitor):
     def __init__(
         self,
         name: str,
+        progress: Progress,
         delay: float = 0.0,
-        formatter: TqdmMonitorFormattingConfig | None = None,
     ):
         self._name = name
         self._delay = delay
-        self._formatter = formatter
         self._current: str = ""
-        self._tqdm: Tqdm | None = None
+        self._counter = 0
+        self._progress = progress
+        self._task_id = None
 
-    def _format_str(self) -> str:
-        desc_template = "{desc:>10}"
-        job_template = "[{n_fmt}/{total_fmt} Jobs]"
-        bar_template = "{bar:20}"
-        suffix_template = "{postfix:<32}"
-
-        if format_config := self._formatter:
-            desc_template = format_config.description.escape(desc_template)
-            job_template = format_config.job.escape(job_template)
-            bar_template = format_config.bar.escape(bar_template)
-            suffix_template = format_config.suffix.escape(suffix_template)
-
-        return f"{desc_template} {bar_template} {job_template}{suffix_template}"
-
-    def _status_str(self, status: "Status") -> str:
-        status_str = str(status)
-        if format_config := self._formatter:
-            if status.is_ok():
-                status_str = format_config.status_ok.escape(status_str)
-            else:
-                status_str = format_config.status_err.escape(status_str)
-        return status_str
+    @staticmethod
+    def default_progress() -> Progress:
+        return Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TextColumn("{task.fields[activity]}"),
+        )
 
     async def open(self, size: int, message: str = ""):
-        self._tqdm = Tqdm(
-            bar_format=self._format_str(),
-            desc=self._name,
+        self._task_id = self._progress.add_task(
+            description=self._name,
+            activity=message,
             total=size,
         )
-        with self._tqdm.get_lock():
-            self._tqdm.set_postfix_str(message)
 
     async def close(self, status: "Status"):
-        if tqdm := self._tqdm:
-            with tqdm.get_lock():
-                tqdm.set_postfix_str(self._status_str(status))
-                tqdm.close()
+        if (task := self._task_id) is not None:
+            self._progress.update(task, activity=status.markup())
+            self._progress.stop_task(task)
+
         self._current = ""
-        self._tqdm = None
+        self._counter = 0
+        self._task_id = None
 
     async def start_command(self, message: str):
-        if tqdm := self._tqdm:
-            with tqdm.get_lock():
-                self._current = message
-                tqdm.set_postfix_str(message)
+        if (task := self._task_id) is not None:
+            self._current = message
+            self._progress.update(task, activity=message)
 
     async def complete_command(self, status: "Status"):
-        if tqdm := self._tqdm:
-            with tqdm.get_lock():
-                tqdm.set_postfix_str(f"{self._current} -> {self._status_str(status)}")
-                tqdm.update(1)
+        self._counter += 1
+
+        if (task := self._task_id) is not None:
+            self._progress.update(
+                task, advance=1, activity=f"{self._current} -> {status.markup()}"
+            )
 
         if (delay := self._delay) > 0.0:
             await asyncio.sleep(delay)
-
-
-def default_monitor(name: str) -> Monitor:
-    if logging.getLogger().level > logging.INFO:
-        return TqdmMonitor(name, delay=0.8, formatter=TqdmMonitorFormattingConfig())
-    return LoggerMonitor(name)

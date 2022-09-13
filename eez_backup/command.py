@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from enum import Enum
 from pathlib import Path
 from subprocess import CompletedProcess as ProcessResult
 from typing import Any, Iterable, List
@@ -13,45 +14,73 @@ except ImportError:
     from yaml import Loader
 
 
+class StatusCode(int, Enum):
+    Ok = 0
+    Warning = 1
+    Error = 2
+
+
 class Status:
-    def __init__(self, status: int = 0, message: str | None = None):
-        self._inner = status
+    def __init__(self, code: StatusCode = StatusCode.Ok, message: str | None = None):
+        self._code = code
         self._messages = [message.strip()] if message else []
 
     def __repr__(self) -> str:
-        return f"Status({self._inner}, messages={self._messages})"
+        return self._repr(-1)
 
     def __str__(self) -> str:
-        if self.is_ok():
-            return "Ok"
-        return f"Err({self._inner})"
+        return self._code.name
+
+    def _repr(self, max_message_length: int = 0) -> str:
+        message = ", ".join(self._messages)
+
+        if max_message_length < 0:
+            message = ""
+        elif 3 < max_message_length < len(message):
+            message = f"{message[:max_message_length - 3]:.<{max_message_length}}"
+
+        return f"{self._code.name}({message})"
+
+    def markup(self) -> str:
+        match self._code:
+            case StatusCode.Ok:
+                return f"[green]{self._repr(0)}[/green]"
+            case StatusCode.Warning:
+                return f"[bold yellow]{self._repr(16)}[/bold yellow]"
+            case StatusCode.Error:
+                return f"[bold red]{self._repr(64)}[/bold red]"
 
     @classmethod
     def from_process_result(cls, result: ProcessResult) -> "Status":
         return cls(
-            result.returncode, message=result.stderr.decode("utf-8") if result.stderr else None
+            code=StatusCode.Ok if result.returncode == 0 else StatusCode.Error,
+            message=result.stderr.decode("utf-8") if result.stderr else None,
         )
 
     def __add__(self, other: "Status") -> "Status":
-        status = Status(max(self.inner, other.inner))
+        status = Status(0)
+        status._code = max(self.code, other.code)
         status._messages = self._messages + other.messages
         return status
 
     def __iadd__(self, other: "Status"):
-        self._inner = max(self.inner, other.inner)
+        self._code = max(self.code, other.code)
         self._messages.extend(other.messages)
         return self
 
     @property
-    def inner(self) -> int:
-        return self._inner
+    def code(self) -> StatusCode:
+        return self._code
 
     @property
     def messages(self) -> List[str]:
         return self._messages[:]
 
     def is_ok(self) -> bool:
-        return self.inner == 0
+        return self.code == StatusCode.Ok
+
+    def is_err(self) -> bool:
+        return self.code == StatusCode.Error
 
 
 class Command(list):
@@ -165,6 +194,7 @@ class CommandSequence:
                 if not item.ignore_error:
                     global_status += status
                 if item.abort_on_error:
+                    global_status += Status(StatusCode.Warning, "Abort")
                     break
 
         await monitor.close(global_status)

@@ -5,23 +5,33 @@ import os
 import sys
 from argparse import Namespace
 from collections import defaultdict
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from functools import reduce
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, ContextManager, Callable
 
+from rich.logging import RichHandler
 from yaml import load
 
 from eez_backup.command import CommandSequence, Status
 from eez_backup.common import Env
 from eez_backup.config import Config
-from eez_backup.monitor import default_monitor
+from eez_backup.monitor import ProgressMonitor, Monitor, LoggerMonitor
 from eez_backup.profile import Profile
 
 try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
+
+
+@contextmanager
+def monitor_factory() -> ContextManager[Callable[[str], Monitor]]:
+    if logging.getLogger().level > logging.INFO:
+        with ProgressMonitor.default_progress() as progress:
+            yield lambda name: ProgressMonitor(name, progress, 0.8)
+    else:
+        yield lambda name: LoggerMonitor(name)
 
 
 async def map_repositories(profiles: Iterable[Profile], args, *_, **__) -> Status:
@@ -31,14 +41,15 @@ async def map_repositories(profiles: Iterable[Profile], args, *_, **__) -> Statu
     except ValueError:
         ValueError(f"Malformed command {args}")
 
-    tasks = []
-    repositories = {p.repository for p in profiles}
-    for repository in repositories:
-        sequence = CommandSequence()
-        sequence.add_command(repository.base_command(*args))
-        tasks.append(sequence.exec(monitor=default_monitor(repository.tag), capture_output=True))
+    with monitor_factory() as new_monitor:
+        tasks = []
+        repositories = {p.repository for p in profiles}
+        for repository in repositories:
+            sequence = CommandSequence()
+            sequence.add_command(repository.base_command(*args))
+            tasks.append(sequence.exec(monitor=new_monitor(repository.tag), capture_output=True))
 
-    return reduce(Status.__add__, await asyncio.gather(*tasks), Status())
+        return reduce(Status.__add__, await asyncio.gather(*tasks), Status())
 
 
 async def map_profiles(profiles: Iterable[Profile], args, *_, **__) -> Status:
@@ -52,17 +63,17 @@ async def map_profiles(profiles: Iterable[Profile], args, *_, **__) -> Status:
     for profile in profiles:
         profile_groups[profile.repository].append(profile)
 
-    tasks = []
+    with monitor_factory() as new_monitor:
+        tasks = []
+        for repository, profiles_ in profile_groups.items():
+            sequence = CommandSequence()
 
-    for repository, profiles_ in profile_groups.items():
-        sequence = CommandSequence()
+            for profile in profiles_:
+                sequence.add_command(profile.base_command(*args))
 
-        for profile in profiles_:
-            sequence.add_command(profile.base_command(*args))
+            tasks.append(sequence.exec(monitor=new_monitor(repository.tag), capture_output=True))
 
-        tasks.append(sequence.exec(monitor=default_monitor(repository.tag), capture_output=True))
-
-    return reduce(Status.__add__, await asyncio.gather(*tasks), Status())
+        return reduce(Status.__add__, await asyncio.gather(*tasks), Status())
 
 
 async def backup(profiles: Iterable[Profile], *_, **__) -> Status:
@@ -70,9 +81,8 @@ async def backup(profiles: Iterable[Profile], *_, **__) -> Status:
     for profile in profiles:
         profile_groups[profile.repository].append(profile)
 
-    with ExitStack() as stack:
+    with ExitStack() as stack, monitor_factory() as new_monitor:
         tasks = []
-
         for repository, profiles_ in profile_groups.items():
             sequence = CommandSequence()
 
@@ -81,9 +91,7 @@ async def backup(profiles: Iterable[Profile], *_, **__) -> Status:
                 sequence.add_command(stack.enter_context(profile.backup_cmd_context()))
                 sequence.add_command(profile.clean_cmd())
 
-            tasks.append(
-                sequence.exec(monitor=default_monitor(repository.tag), capture_output=True)
-            )
+            tasks.append(sequence.exec(monitor=new_monitor(repository.tag), capture_output=True))
 
         return reduce(Status.__add__, await asyncio.gather(*tasks), Status())
 
@@ -147,6 +155,7 @@ def cli(argv=None) -> int:
     argv = argv or sys.argv[1:]
     args = parse_args(argv)
 
+    logging.basicConfig(format="%(message)s", datefmt="[%X]", handlers=[RichHandler()])
     logging.getLogger().setLevel(verbosity_to_loglevel(args.verbose))
     logging.debug(f"{args=}")
 
@@ -179,9 +188,9 @@ def cli(argv=None) -> int:
 
     async def cmd():
         status = await args.func(profiles, argv)
-        if not status.is_ok():
+        if status.is_err():
             for i, message in enumerate(status.messages, start=1):
                 logging.error(f"{i}: {message!r}")
-        return status.inner
+        return status.code
 
     return asyncio.run(cmd())

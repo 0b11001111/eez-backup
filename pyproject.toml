@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "eez-backup"
-version = "0.1.3"
+version = "0.1.4"
 license = "MIT"
 authors = ["0b11001111 <19192307+0b11001111@users.noreply.github.com>"]
 repository = "https://github.com/0b11001111/eez-backup"
@@ -18,9 +18,8 @@ classifiers = [
 python = "^3.10"
 PyYAML = "^5.4.1"
 pydantic = "^1.9.0"
-tqdm = "^4.64.1"
-pytest = "^7.1.3"
 frozendict = "^2.3.4"
+rich = "^12.5.1"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.971"

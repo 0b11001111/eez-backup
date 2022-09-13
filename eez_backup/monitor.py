@@ -87,7 +87,7 @@ class ProgressMonitor(Monitor):
     def default_progress() -> Progress:
         return Progress(
             SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
+            TextColumn("[bold]{task.description}[/bold]"),
             BarColumn(),
             MofNCompleteColumn(),
             TimeElapsedColumn(),

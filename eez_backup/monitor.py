@@ -116,24 +116,28 @@ class TqdmMonitor(Monitor):
             desc=self._name,
             total=size,
         )
-        self._tqdm.set_postfix_str(message)
+        with self._tqdm.get_lock():
+            self._tqdm.set_postfix_str(message)
 
     async def close(self, status: "Status"):
         if tqdm := self._tqdm:
-            tqdm.set_postfix_str(self._status_str(status))
-            tqdm.close()
+            with tqdm.get_lock():
+                tqdm.set_postfix_str(self._status_str(status))
+                tqdm.close()
         self._current = ""
         self._tqdm = None
 
     async def start_command(self, message: str):
         if tqdm := self._tqdm:
-            self._current = message
-            tqdm.set_postfix_str(message)
+            with tqdm.get_lock():
+                self._current = message
+                tqdm.set_postfix_str(message)
 
     async def complete_command(self, status: "Status"):
         if tqdm := self._tqdm:
-            tqdm.set_postfix_str(f"{self._current} -> {self._status_str(status)}")
-            tqdm.update(1)
+            with tqdm.get_lock():
+                tqdm.set_postfix_str(f"{self._current} -> {self._status_str(status)}")
+                tqdm.update(1)
 
         if (delay := self._delay) > 0.0:
             await asyncio.sleep(delay)

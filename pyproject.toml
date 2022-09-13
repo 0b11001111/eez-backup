@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "eez-backup"
+version = "0.1.0"
+description = "Another convenience wrapper for _restic_"
+readme = "README.md"
+authors = ["0b11001111 <19192307+0b11001111@users.noreply.github.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+PyYAML = "^5.4.1"
+pydantic = "^1.9.0"
+tqdm = "^4.64.1"
+pytest = "^7.1.3"
+frozendict = "^2.3.4"
+
+[tool.poetry.dev-dependencies]
+mypy = "^0.971"
+black = "^22.8.0"
+types-PyYAML = "^6.0.11"
+pytest = "^7.1.3"
+SecretStorage = "^3.3.3"
+
+[tool.poetry.scripts]
+backup = "eez_backup.__main__:cli"
+
+[tool.black]
+line-length = 99
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

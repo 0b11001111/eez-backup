@@ -192,9 +192,10 @@ class CommandSequence:
 
             if not status.is_ok():
                 if not item.ignore_error:
+                    global_status += Status(StatusCode.Warning, "Abort")
+                else:
                     global_status += status
                 if item.abort_on_error:
-                    global_status += Status(StatusCode.Warning, "Abort")
                     break
 
         await monitor.close(global_status)

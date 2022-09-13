@@ -1,12 +1,21 @@
 [tool.poetry]
 name = "eez-backup"
-version = "0.1.1"
+version = "0.1.2"
+license = "MIT"
+authors = ["0b11001111 <19192307+0b11001111@users.noreply.github.com>"]
+repository = "https://github.com/0b11001111/eez-backup"
 description = "Another convenience wrapper for _restic_"
 readme = "README.md"
-authors = ["0b11001111 <19192307+0b11001111@users.noreply.github.com>"]
+keywords = ["backup", "restic"]
+classifiers = [
+    "Topic :: System :: Archiving",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: Utilities",
+    "Typing :: Typed"
+]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 PyYAML = "^5.4.1"
 pydantic = "^1.9.0"
 tqdm = "^4.64.1"

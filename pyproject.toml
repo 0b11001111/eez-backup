@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "eez-backup"
-version = "0.1.0"
+version = "0.1.1"
 description = "Another convenience wrapper for _restic_"
 readme = "README.md"
 authors = ["0b11001111 <19192307+0b11001111@users.noreply.github.com>"]

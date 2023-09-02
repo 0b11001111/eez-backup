@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from enum import Enum
 from pathlib import Path
 from subprocess import CompletedProcess as ProcessResult
@@ -12,6 +13,8 @@ try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
+
+GLOBAL_ENV = Env(os.environ)
 
 
 class StatusCode(int, Enum):
@@ -85,11 +88,11 @@ class Status:
 
 class Command(list):
     def __init__(
-        self,
-        *args: str,
-        name: str | None = None,
-        cwd: Path | None = None,
-        env: Env | None = None,
+            self,
+            *args: str,
+            name: str | None = None,
+            cwd: Path | None = None,
+            env: Env | None = None,
     ):
         self._env = env
         self._cwd = cwd
@@ -123,7 +126,7 @@ class Command(list):
         self.extend([key, str(value)])
 
     async def exec(
-        self, capture_output=False, timeout_s: float = float("inf"), **kwargs
+            self, capture_output=False, timeout_s: float = float("inf"), **kwargs
     ) -> ProcessResult:
         logging.debug(f"Run {self!r}")
         logging.debug(f"In {self._cwd}")
@@ -132,7 +135,7 @@ class Command(list):
             *self,
             stdout=asyncio.subprocess.PIPE if capture_output else None,
             stderr=asyncio.subprocess.PIPE if capture_output else None,
-            env=self._env,
+            env=GLOBAL_ENV | self._env,
             cwd=self._cwd,
             **kwargs,
         )
@@ -170,7 +173,7 @@ class CommandSequence:
             self.add_command(command)
 
     def add_command(
-        self, command: Command, abort_on_error: bool = True, ignore_error: bool = False
+            self, command: Command, abort_on_error: bool = True, ignore_error: bool = False
     ):
         self._commands.append(
             _CommandSequenceItem(

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Generator
 
-from pydantic import Extra, Field, SecretStr, root_validator
+from pydantic import Field, SecretStr, root_validator
 
 from eez_backup.command import Command
 from eez_backup.common import BaseModel, restic_executable, Env

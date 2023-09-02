@@ -168,7 +168,7 @@ def cli(argv=None) -> int:
     # compile and filter profiles
     profiles = list(
         config.compile_profiles(
-            repository_defaults=dict(env=Env(os.environ)),
+            repository_defaults=dict(),
             profile_defaults=dict(base=args.config.parent.absolute()),
         )
     )

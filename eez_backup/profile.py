@@ -55,7 +55,7 @@ class Profile(BaseModel):
 
     def base_command(self, *args: str, **kwargs) -> Command:
         cmd = self.repository.base_command(*args, **kwargs)
-        cmd.set_name(f"{self.identifier!r}")
+        cmd.set_name(repr(self.identifier))
         cmd.set_cwd(self.base)
         cmd.update_env(self.env)
         return cmd

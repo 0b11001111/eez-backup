@@ -32,5 +32,5 @@ class Env(FrozenDict):
         yield cls.validate
 
     @classmethod
-    def validate(cls, values):
+    def validate(cls, values, _validation_info):
         return cls(values)

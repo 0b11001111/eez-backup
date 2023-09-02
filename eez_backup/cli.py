@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import logging
-import os
 import sys
 from argparse import Namespace
 from collections import defaultdict
@@ -14,7 +13,6 @@ from rich.logging import RichHandler
 from yaml import load
 
 from eez_backup.command import CommandSequence, Status
-from eez_backup.common import Env
 from eez_backup.config import Config
 from eez_backup.monitor import ProgressMonitor, Monitor, LoggerMonitor
 from eez_backup.profile import Profile
@@ -161,7 +159,7 @@ def cli(argv=None) -> int:
 
     # load config
     with args.config.expanduser().open(mode="rt") as f:
-        config = Config.parse_obj(load(f, Loader=Loader))
+        config = Config.model_validate(load(f, Loader=Loader))
 
     logging.debug(config.json())
 

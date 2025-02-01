@@ -10,6 +10,7 @@ from rich.progress import (
     SpinnerColumn,
     TextColumn,
     TimeElapsedColumn,
+    TaskID,
 )
 
 if TYPE_CHECKING:
@@ -81,7 +82,7 @@ class ProgressMonitor(Monitor):
         self._current: str = ""
         self._counter = 0
         self._progress = progress
-        self._task_id = None
+        self._task_id: TaskID | None = None
 
     @staticmethod
     def default_progress() -> Progress:

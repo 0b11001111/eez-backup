@@ -23,7 +23,7 @@ class InProfile(BaseModel):
 
     model_config = ConfigDict()
 
-    def merge(self, other: Self) -> Self:
+    def merge(self, other: "InProfile") -> "InProfile":
         new_profile = InProfile.model_validate(self.dump() | other.dump())
         new_profile.env = self.env | other.env
         if self.base and other.base and (new_base := self.base.joinpath(other.base)).is_dir():

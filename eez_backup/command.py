@@ -36,7 +36,7 @@ class Status:
         if max_message_length < 0:
             message = ""
         elif 3 < max_message_length < len(message):
-            message = f"{message[:max_message_length - 3]:.<{max_message_length}}"
+            message = f"{message[: max_message_length - 3]:.<{max_message_length}}"
 
         return f"{self._code.name}({message})"
 
@@ -57,7 +57,7 @@ class Status:
         )
 
     def __add__(self, other: "Status") -> "Status":
-        status = Status(0)
+        status = Status(StatusCode.Ok)
         status._code = max(self.code, other.code)
         status._messages = self._messages + other.messages
         return status
@@ -129,7 +129,7 @@ class Command(list):
             *self,
             stdout=asyncio.subprocess.PIPE if capture_output else None,
             stderr=asyncio.subprocess.PIPE if capture_output else None,
-            env=GLOBAL_ENV | self._env,
+            env=GLOBAL_ENV | (self._env or {}),
             cwd=self._cwd,
             **kwargs,
         )

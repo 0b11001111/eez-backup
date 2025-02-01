@@ -1,4 +1,4 @@
-[tool.poetry]
+[project]
 name = "eez-backup"
 version = "0.2.0"
 license = "MIT"
@@ -13,30 +13,22 @@ classifiers = [
     "Topic :: Utilities",
     "Typing :: Typed"
 ]
+requires-python = ">=3.13"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-PyYAML = "^6.0.1"
-pydantic = "^2.3.0"
-frozendict = "^2.3.4"
-rich = "^13.5.2"
+dependencies = [
+    "frozendict>=2.4.6",
+    "pydantic>=2.9.2",
+    "rich>=13.9.4",
+]
 
-[tool.poetry.dev-dependencies]
-mypy = "^1.5.1"
-black = "^23.7.0"
-types-PyYAML = "^6.0.11"
-pytest = "^7.1.3"
-SecretStorage = "^3.3.3"
+[dependency-groups]
+dev = [
+    "mypy>=1.13.0",
+    "pytest>=8.3.3",
+    "ruff>=0.7.2",
+    "secretstorage>=3.3.3",
+    "types-pyyaml>=6.0.12.20240917",
+]
 
-[tool.poetry.scripts]
-backup = "eez_backup.__main__:cli"
-
-[tool.black]
-line-length = 99
-
-[tool.mypy]
-ignore_missing_imports = true
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.ruff]
+line-length = 118

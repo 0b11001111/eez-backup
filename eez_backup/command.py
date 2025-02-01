@@ -7,13 +7,8 @@ from pathlib import Path
 from subprocess import CompletedProcess as ProcessResult
 from typing import Any, Iterable, List
 
-from eez_backup.common import Env, BaseModel
-from eez_backup.monitor import Monitor, DummyMonitor
-
-try:
-    from yaml import CLoader as Loader
-except ImportError:
-    from yaml import Loader
+from eez_backup.base import Env
+from eez_backup.monitor import Monitor, NullMonitor
 
 GLOBAL_ENV = Env(os.environ)
 
@@ -126,9 +121,7 @@ class Command(list):
     def add_kwarg(self, key: str, value: Any):
         self.extend([key, str(value)])
 
-    async def exec(
-        self, capture_output=False, timeout_s: float = float("inf"), **kwargs
-    ) -> ProcessResult:
+    async def exec(self, capture_output=False, timeout_s: float = float("inf"), **kwargs) -> ProcessResult:
         logging.debug(f"Run {self!r}")
         logging.debug(f"In {self._cwd}")
         logging.debug(f"With {set((self._env or {}).keys())}")
@@ -174,18 +167,18 @@ class CommandSequence:
         for command in commands:
             self.add_command(command)
 
-    def add_command(
-        self, command: Command, abort_on_error: bool = True, ignore_error: bool = False
-    ):
+    def add_command(self, command: Command, abort_on_error: bool = True, ignore_error: bool = False):
         self._commands.append(
             _CommandSequenceItem(
-                command=command, abort_on_error=abort_on_error, ignore_error=ignore_error
+                command=command,
+                abort_on_error=abort_on_error,
+                ignore_error=ignore_error,
             )
         )
 
     async def exec(self, monitor: Monitor | None = None, **kwargs) -> Status:
         global_status = Status()
-        monitor = monitor or DummyMonitor()
+        monitor = monitor or NullMonitor()
         await monitor.open(len(self._commands), self._name)
 
         for item in self._commands:

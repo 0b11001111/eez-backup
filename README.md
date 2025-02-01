@@ -12,8 +12,8 @@ python -m pip install eez-backup
 
 ## Setup
 
-`eez-backup` assumes `backup.yml` to be present in your home directory, thus create it.
-You can use [`tests/demo/config.yml`](./tests/demo/config.yml) as a template.
+`eez-backup` assumes `backup.toml` to be present in your home directory, thus create it.
+You can use [`tests/demo/config.toml`](./tests/demo/config.toml) as a template.
 
 Now, you can initialize the _restic_ repositories by running
 
@@ -46,7 +46,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -v, --verbose         log level (disables progress bars if set)
-  -c , --config         config file to use, default is ~/.backup.yml
+  -c , --config         config file to use, default is ~/.backup.toml
   -r , --repository     repository to use, use all repositories by default, can be used multiple times
   -p , --profile        profile to use, use all profiles by default, can be used multiple times
 ```

@@ -2,7 +2,7 @@ from typing import Dict, Optional, Any, Mapping
 
 from pydantic import Field
 
-from eez_backup.common import BaseModel
+from eez_backup.base import BaseModel
 from eez_backup.profile import InProfile, ProfileGenerator
 from eez_backup.repository import InRepository, Repository, RepositoryGenerator
 
@@ -12,12 +12,10 @@ class Config(BaseModel):
     globals_: Optional[InProfile] = Field(alias="globals")
     profiles: Dict[str, InProfile] = Field(default_factory=dict)
 
-    def compile_repositories(
-        self, defaults: Mapping[str, Any] | None = None
-    ) -> RepositoryGenerator:
+    def compile_repositories(self, defaults: Mapping[str, Any] | None = None) -> RepositoryGenerator:
         defaults = defaults | {}
         for tag, repository in self.repositories.items():
-            yield Repository(tag=tag, **(defaults | repository.dict()))
+            yield Repository(tag=tag, **(defaults | repository.dump()))
 
     def compile_profiles(
         self,

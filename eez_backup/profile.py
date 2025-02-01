@@ -2,12 +2,12 @@ from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import ContextManager, Dict, Generator, List, Optional
+from typing import Dict, Generator, List, Self
 
-from pydantic import Field
+from pydantic import Field, ConfigDict
 
 from eez_backup.command import Command
-from eez_backup.common import BaseModel, Env
+from eez_backup.base import BaseModel, Env
 from eez_backup.repository import Repository
 
 ProfileGenerator = Generator["Profile", None, None]
@@ -21,21 +21,20 @@ class InProfile(BaseModel):
     exclude: List[Path] | None = None
     clean_policy: Dict[str, int] | None = None
 
-    def merge(self, other: "InProfile") -> "InProfile":
-        new_profile = InProfile.parse_obj(self.dict() | other.dict())
+    model_config = ConfigDict()
+
+    def merge(self, other: Self) -> Self:
+        new_profile = InProfile.model_validate(self.dump() | other.dump())
         new_profile.env = self.env | other.env
         if self.base and other.base and (new_base := self.base.joinpath(other.base)).is_dir():
             new_profile.base = new_base
         return new_profile
 
     def generate_profiles(
-        self,
-        repositories: Dict[str, Repository],
-        default: Optional["InProfile"] = None,
-        **kwargs,
+        self, repositories: Dict[str, Repository], default: Self | None = None, **kwargs
     ) -> ProfileGenerator:
         profile = default.merge(self) if default else self
-        fields = profile.dict() | kwargs
+        fields = profile.dump() | kwargs
         for repository in fields.pop("repositories", []):
             yield Profile(repository=repositories[repository], **fields)
 
@@ -44,7 +43,7 @@ class Profile(BaseModel):
     tag: str = Field(min_length=1)
     base: Path
     repository: Repository
-    include: List[Path] = Field(min_items=1)
+    include: List[Path] = Field(min_length=1)
     exclude: List[Path] = Field(default_factory=list)
     clean_policy: Dict[str, int]
     env: Env = Field(default_factory=Env)
@@ -61,20 +60,20 @@ class Profile(BaseModel):
         return cmd
 
     @contextmanager
-    def backup_cmd_context(self, **kwargs) -> ContextManager[Command]:
+    def backup_cmd_context(self, **kwargs) -> Generator[Command, None, None]:
         cmd = self.base_command(**kwargs)
         cmd.set_name(f"Backup {self.identifier!r}")
         cmd.add_arg("backup")
         cmd.add_arg("-q")
         cmd.add_kwarg("--tag", self.tag)
 
-        with NamedTemporaryFile(mode="rt+") as incl, NamedTemporaryFile(mode="rt+") as excl:
-            incl.write("\n".join(map(str, self.include)))
-            excl.write("\n".join(map(str, self.exclude)))
-            incl.flush()
-            excl.flush()
-            cmd.add_kwarg("--files-from", incl.name)
-            cmd.add_kwarg("--exclude-file", excl.name)
+        with NamedTemporaryFile(mode="rt+") as f_incl, NamedTemporaryFile(mode="rt+") as f_excl:
+            f_incl.write("\n".join(map(str, self.include)))
+            f_excl.write("\n".join(map(str, self.exclude)))
+            f_incl.flush()
+            f_excl.flush()
+            cmd.add_kwarg("--files-from", f_incl.name)
+            cmd.add_kwarg("--exclude-file", f_excl.name)
             yield cmd
 
     def clean_cmd(self, **kwargs) -> Command:

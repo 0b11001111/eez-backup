@@ -1,14 +1,14 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
     Progress,
     SpinnerColumn,
     TextColumn,
-    BarColumn,
-    MofNCompleteColumn,
     TimeElapsedColumn,
 )
 
@@ -34,7 +34,7 @@ class Monitor(ABC):
         raise NotImplementedError
 
 
-class DummyMonitor(Monitor):
+class NullMonitor(Monitor):
     async def open(self, size: int, message: str = ""):
         pass
 
@@ -119,9 +119,7 @@ class ProgressMonitor(Monitor):
         self._counter += 1
 
         if (task := self._task_id) is not None:
-            self._progress.update(
-                task, advance=1, activity=f"{self._current} -> {status.markup()}"
-            )
+            self._progress.update(task, advance=1, activity=f"{self._current} -> {status.markup()}")
 
         if (delay := self._delay) > 0.0:
             await asyncio.sleep(delay)

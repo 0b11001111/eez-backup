@@ -2,29 +2,24 @@ import argparse
 import asyncio
 import logging
 import sys
+import tomllib
 from argparse import Namespace
 from collections import defaultdict
 from contextlib import ExitStack, contextmanager
 from functools import reduce
 from pathlib import Path
-from typing import Iterable, ContextManager, Callable
+from typing import Iterable, Callable, Generator
 
 from rich.logging import RichHandler
-from yaml import load
 
 from eez_backup.command import CommandSequence, Status
 from eez_backup.config import Config
 from eez_backup.monitor import ProgressMonitor, Monitor, LoggerMonitor
 from eez_backup.profile import Profile
 
-try:
-    from yaml import CLoader as Loader
-except ImportError:
-    from yaml import Loader
-
 
 @contextmanager
-def monitor_factory() -> ContextManager[Callable[[str], Monitor]]:
+def monitor_factory() -> Generator[Callable[[str], Monitor], None, None]:
     if logging.getLogger().level > logging.INFO:
         with ProgressMonitor.default_progress() as progress:
             yield lambda name: ProgressMonitor(name, progress, 0.8)
@@ -39,13 +34,13 @@ async def map_repositories(profiles: Iterable[Profile], args, *_, **__) -> Statu
     except ValueError:
         ValueError(f"Malformed command {args}")
 
-    with monitor_factory() as new_monitor:
+    with monitor_factory() as monitor:
         tasks = []
         repositories = {p.repository for p in profiles}
         for repository in repositories:
             sequence = CommandSequence()
             sequence.add_command(repository.base_command(*args))
-            tasks.append(sequence.exec(monitor=new_monitor(repository.tag), capture_output=True))
+            tasks.append(sequence.exec(monitor=monitor(repository.tag), capture_output=True))
 
         return reduce(Status.__add__, await asyncio.gather(*tasks), Status())
 
@@ -79,7 +74,7 @@ async def backup(profiles: Iterable[Profile], *_, **__) -> Status:
     for profile in profiles:
         profile_groups[profile.repository].append(profile)
 
-    with ExitStack() as stack, monitor_factory() as new_monitor:
+    with ExitStack() as stack, monitor_factory() as monitor:
         tasks = []
         for repository, profiles_ in profile_groups.items():
             sequence = CommandSequence()
@@ -89,23 +84,21 @@ async def backup(profiles: Iterable[Profile], *_, **__) -> Status:
                 sequence.add_command(stack.enter_context(profile.backup_cmd_context()))
                 sequence.add_command(profile.clean_cmd())
 
-            tasks.append(sequence.exec(monitor=new_monitor(repository.tag), capture_output=True))
+            tasks.append(sequence.exec(monitor=monitor(repository.tag), capture_output=True))
 
         return reduce(Status.__add__, await asyncio.gather(*tasks), Status())
 
 
 def parse_args(argv=None) -> Namespace:
     parser = argparse.ArgumentParser(description="Another convenience wrapper for restic")
-    parser.add_argument(
-        "-v", "--verbose", action="count", help="log level (disables progress bars if set)"
-    )
+    parser.add_argument("-v", "--verbose", action="count", help="log level (disables progress bars if set)")
     parser.add_argument(
         "-c",
         "--config",
         type=Path,
-        default=Path("~/.backup.yml").expanduser(),
+        default=Path("~/.backup.toml").expanduser(),
         metavar="",
-        help="config file to use, default is ~/.backup.yml",
+        help="config file to use, default is ~/.backup.toml",
     )
     parser.add_argument(
         "-r",
@@ -135,9 +128,7 @@ def parse_args(argv=None) -> Namespace:
     map_repositories_parser.add_argument("args", nargs=argparse.REMAINDER)
     map_repositories_parser.set_defaults(func=map_repositories)
 
-    map_profiles_parser = subparsers.add_parser(
-        "profile-map", help="run any restic command for all given profiles"
-    )
+    map_profiles_parser = subparsers.add_parser("profile-map", help="run any restic command for all given profiles")
     map_profiles_parser.add_argument("args", nargs=argparse.REMAINDER)
     map_profiles_parser.set_defaults(func=map_profiles)
 
@@ -158,10 +149,10 @@ def cli(argv=None) -> int:
     logging.debug(f"{args=}")
 
     # load config
-    with args.config.expanduser().open(mode="rt") as f:
-        config = Config.model_validate(load(f, Loader=Loader))
+    with args.config.expanduser().open(mode="rb") as f:
+        config = Config.model_validate(tomllib.load(f))
 
-    logging.debug(config.json())
+    logging.debug(f"{config=!r}")
 
     # compile and filter profiles
     profiles = list(
@@ -181,7 +172,7 @@ def cli(argv=None) -> int:
         profiles = [p for p in profiles if p.tag in selection]
 
     if not profiles:
-        logging.warning(f"no profiles specified")
+        logging.warning("no profiles specified")
         return 1
 
     async def cmd():

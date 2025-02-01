@@ -33,7 +33,7 @@ def repositories():
     shutil.rmtree(repository_1, ignore_errors=True)
     shutil.rmtree(repository_2, ignore_errors=True)
 
-    assert cli("-v -c demo/config.yml repo-map init".split()) == 0
+    assert cli("-v -c demo/config.toml repo-map init".split()) == 0
 
     yield None
 
@@ -42,5 +42,5 @@ def repositories():
 
 
 def test_end2end(keyring, repositories):
-    cli("-v -c demo/config.yml run".split())
-    cli("-v -c demo/config.yml profile-map forget".split())
+    cli("-v -c demo/config.toml run".split())
+    cli("-v -c demo/config.toml profile-map forget".split())

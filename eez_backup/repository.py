@@ -1,12 +1,10 @@
 from pathlib import Path
 from typing import Generator
 
-from pydantic import Field, SecretStr, root_validator
+from pydantic import Field, SecretStr, ConfigDict, model_validator
 
+from eez_backup.base import BaseModel, restic_executable, Env
 from eez_backup.command import Command
-from eez_backup.common import BaseModel, restic_executable, Env
-
-RepositoryGenerator = Generator["Repository", None, None]
 
 
 class InRepository(BaseModel):
@@ -16,12 +14,12 @@ class InRepository(BaseModel):
     password_command: str | None = None
     env: Env = Field(default_factory=Env)
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def validate_password(cls, values):
         keys = {"password", "password_file", "password_command"}
 
         if sum(bool(values.get(key)) for key in keys) != 1:
-            raise ValueError(f"Exactly one of the fields {keys} must be set!")
+            raise ValueError(f"Exactly one of the password options ({keys}) must be set!")
 
         return values
 
@@ -30,8 +28,7 @@ class Repository(InRepository):
     tag: str = Field(min_length=1)
     env: Env = Field(default_factory=Env)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def base_command(self, *args: str, **kwargs) -> Command:
         kwargs = {"name": self.tag} | kwargs
@@ -53,3 +50,6 @@ class Repository(InRepository):
         cmd.add_arg("snapshots")
         cmd.add_arg("--json")
         return cmd
+
+
+RepositoryGenerator = Generator[Repository, None, None]

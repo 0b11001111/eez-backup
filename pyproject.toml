@@ -20,15 +20,15 @@ requires-python = ">=3.13"
 
 dependencies = [
     "frozendict>=2.4.6",
-    "pydantic>=2.10.6",
-    "rich>=13.9.4",
+    "pydantic>=2.11.7",
+    "rich>=14.1.0",
 ]
 
 [dependency-groups]
 dev = [
-    "mypy>=1.14.1",
-    "pytest>=8.3.4",
-    "ruff>=0.9.4",
+    "mypy>=1.17.1",
+    "pytest>=8.4.1",
+    "ruff>=0.12.7",
     "secretstorage>=3.3.3",
 ]
 

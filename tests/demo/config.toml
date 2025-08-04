@@ -1,10 +1,10 @@
 [repositories.local]
 password = "demo1"
-repository = "/tmp/demo_repository_1"
+repository = "/tmp/test_repository_1"
 
 [repositories.remote]
 password_command = "secret-tool lookup app_id eu.luoc.eez-backup app_mode demo"
-repository = "/tmp/demo_repository_2"
+repository = "/tmp/test_repository_2"
 
 [globals.clean_policy]
 --keep-hourly = 24

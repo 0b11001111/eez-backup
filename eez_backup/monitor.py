@@ -85,7 +85,7 @@ class ProgressMonitor(Monitor):
         self._task_id: TaskID | None = None
 
     @staticmethod
-    def default_progress() -> Progress:
+    def default() -> Progress:
         return Progress(
             SpinnerColumn(),
             TextColumn("[bold]{task.description}[/bold]"),

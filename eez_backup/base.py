@@ -1,10 +1,13 @@
 import shutil
 from functools import cache
 from pathlib import Path
+from typing import Any
 from typing import Dict
 
 from frozendict import frozendict
 from pydantic import BaseModel as _BaseModel, ConfigDict, JsonValue
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 
 
 @cache
@@ -21,11 +24,7 @@ class BaseModel(_BaseModel):
         return self.model_dump(exclude_unset=True, exclude_none=True)
 
 
-class Env(frozendict):
+class Env(frozendict[str, str]):
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, values, _validation_info):
-        return cls(values)
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(lambda values: cls(values), handler(dict))

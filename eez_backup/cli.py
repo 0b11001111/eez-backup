@@ -21,7 +21,7 @@ from eez_backup.profile import Profile
 @contextmanager
 def monitor_factory() -> Generator[Callable[[str], Monitor], None, None]:
     if logging.getLogger().level > logging.INFO:
-        with ProgressMonitor.default_progress() as progress:
+        with ProgressMonitor.default() as progress:
             yield lambda name: ProgressMonitor(name, progress, 0.8)
     else:
         yield lambda name: LoggerMonitor(name)

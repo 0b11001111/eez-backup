@@ -66,6 +66,7 @@ class Profile(BaseModel):
         cmd.add_arg("backup")
         cmd.add_arg("-q")
         cmd.add_kwarg("--tag", self.tag)
+        cmd.add_arg("--exclude-caches")
 
         with NamedTemporaryFile(mode="rt+") as f_incl, NamedTemporaryFile(mode="rt+") as f_excl:
             f_incl.write("\n".join(map(str, self.include)))

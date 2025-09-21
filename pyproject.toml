@@ -1,6 +1,6 @@
 [project]
 name = "eez-backup"
-version = "0.3.1"
+version = "0.4.0"
 license.text = "MIT"
 authors = [{ name = "0b11001111", email = "19192307+0b11001111@users.noreply.github.com" }]
 urls.homepage = "https://github.com/0b11001111/eez-backup"
